@@ -9,7 +9,6 @@
 </head>
 <body>
 
-<!-- Animated background particles -->
 <div class="bg-particles" id="particles"></div>
 
 <div class="container">
@@ -17,11 +16,11 @@
     <!-- ── HEADER ── -->
     <header>
         <h1>WeatherCast <span class="gradient-text">ML</span></h1>
-        <p class="subtitle">3 LightGBM models · 64 million training records · Real-time predictions</p>
+        <p class="subtitle">3 LightGBM models · 92 million training records · Real-time predictions</p>
         <div class="header-stats">
             <div class="stat"><span class="stat-num">96.7%</span><span class="stat-lbl">Temp Accuracy</span></div>
             <div class="stat-div"></div>
-            <div class="stat"><span class="stat-num">64M</span><span class="stat-lbl">Records Trained</span></div>
+            <div class="stat"><span class="stat-num">92M</span><span class="stat-lbl">Records Trained</span></div>
             <div class="stat-div"></div>
             <div class="stat"><span class="stat-num">3</span><span class="stat-lbl">ML Models</span></div>
         </div>
@@ -72,7 +71,7 @@
                     <span class="rc-title">Weather Alert</span>
                 </div>
                 <div class="rc-value" style="color: {{ results.alert_color }};">{{ results.extreme_alert }}</div>
-                <div class="alert-badge" style="background: {{ results.alert_color }}20; border: 1px solid {{ results.alert_color }}; color: {{ results.alert_color }};">
+                <div class="alert-badge" style="background: {{ results.alert_color }}20; border: 1px solid {{ results.alert_color }}44; color: {{ results.alert_color }};">
                     {% if results.extreme_code == 0 %}✅ All Clear
                     {% elif results.extreme_code == 1 %}🔥 Heat Advisory
                     {% elif results.extreme_code == 2 %}🥶 Cold Advisory
@@ -80,6 +79,14 @@
                     {% elif results.extreme_code == 4 %}❄️ Snow Advisory
                     {% endif %}
                 </div>
+                <div class="hint-primary" style="border-left-color: {{ results.alert_color }};">{{ results.hint.text }}</div>
+                {% if results.hint.all | length > 1 %}
+                <div class="hint-list">
+                    {% for h in results.hint.all[1:] %}
+                    <div class="hint-item">{{ h }}</div>
+                    {% endfor %}
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -97,16 +104,12 @@
         </div>
 
         <div class="quick-actions">
-            <button type="button" class="btn-randomize" onclick="randomizeInputs()">
-                🎲 Randomize Inputs
-            </button>
+            <button type="button" class="btn-randomize" onclick="randomizeInputs()">🎲 Randomize Inputs</button>
             <button type="button" class="btn-location" id="loc-btn" onclick="fetchMyLocation()">
-                <span class="loc-icon">📍</span>
-                <span id="loc-label">Your Location</span>
+                <span class="loc-icon">📍</span><span id="loc-label">Your Location</span>
             </button>
             <button type="button" class="btn-yesterday" id="yday-btn" onclick="fetchYesterday()">
-                <span class="yday-icon">📅</span>
-                <span id="yday-label">Yesterday's Data</span>
+                <span class="yday-icon">📅</span><span id="yday-label">Yesterday's Data</span>
             </button>
             <span id="scenario-name" class="scenario-label"></span>
         </div>
@@ -230,7 +233,7 @@
     </section>
 
     <footer>
-        <p>Built with FastAPI + LightGBM · Big Data Project 2026</p>
+        <p>WeatherCast ML · Built with FastAPI + LightGBM · Big Data Project 2026</p>
     </footer>
 </div>
 
@@ -242,13 +245,13 @@
         <h2>Temperature Prediction Model</h2>
         <div class="modal-section">
             <h4>Overview</h4>
-            <p>A LightGBM regression model that predicts next-day temperature using today's atmospheric conditions. Trained on over 64 million NOAA Global Surface Summary of Day (GSOD) records.</p>
+            <p>A LightGBM regression model that predicts next-day temperature using today's atmospheric conditions. Trained on over 92 million NOAA Global Surface Summary of Day (GSOD) records.</p>
         </div>
         <div class="modal-stats-grid">
             <div class="modal-stat"><span>R²</span><strong>0.9669</strong></div>
             <div class="modal-stat"><span>MAE</span><strong>2.88°F</strong></div>
             <div class="modal-stat"><span>Within ±5°F</span><strong>~92%</strong></div>
-            <div class="modal-stat"><span>Training Rows</span><strong>64M</strong></div>
+            <div class="modal-stat"><span>Training Rows</span><strong>92M</strong></div>
         </div>
         <div class="modal-section">
             <h4>Key Features Used</h4>
@@ -289,7 +292,7 @@
         </div>
         <div class="modal-section">
             <h4>How It Works</h4>
-            <p>Uses dew point depression, precipitation history, and pressure trends as primary signals. Low pressure combined with high dew point and recent precipitation are the strongest rain predictors. The model outputs both a hard label and a probability via predict_proba.</p>
+            <p>Uses dew point depression, precipitation history, and pressure trends as primary signals. Low pressure combined with high dew point and recent precipitation are the strongest rain predictors.</p>
         </div>
     </div>
 </div>
@@ -319,311 +322,114 @@
         </div>
         <div class="modal-section">
             <h4>How It Works</h4>
-            <p>Detects threshold-crossing patterns: temperatures above 95°F trigger heat alerts, below 10°F trigger cold alerts. Rapid pressure drops combined with strong winds signal storm risk. Snow depth and sub-freezing temps activate snow advisories.</p>
+            <p>Detects threshold-crossing patterns: temperatures above 95°F trigger heat alerts, below 10°F trigger cold alerts. Rapid pressure drops combined with strong winds signal storm risk.</p>
         </div>
     </div>
 </div>
 
 <script>
-// ── Yesterday's Data ──
-async function fetchYesterday() {
-    const btn   = document.getElementById('yday-btn');
-    const label = document.getElementById('yday-label');
-    const sname = document.getElementById('scenario-name');
-
-    if (!navigator.geolocation) {
-        sname.textContent = '⚠️ Geolocation not supported by your browser.';
-        sname.classList.add('visible');
-        return;
-    }
-
-    btn.classList.add('loading');
-    btn.disabled = true;
-    label.textContent = 'Locating…';
-    sname.classList.remove('visible');
-
-    navigator.geolocation.getCurrentPosition(
-        async ({ coords }) => {
-            const { latitude: lat, longitude: lon } = coords;
-            label.textContent = 'Fetching yesterday…';
-
-            try {
-                // Build yesterday's date string YYYY-MM-DD
-                const elevRes  = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
-                const elevData = await elevRes.json();
-                const elev     = elevData.elevation?.[0] ?? 0;
-
-                const yesterday = new Date();
-                yesterday.setDate(yesterday.getDate() - 1);
-                const dateStr = yesterday.toISOString().slice(0, 10); // "2025-02-28"
-
-                // Use historical API with start_date = end_date = yesterday → full 24 hrs
-                const wxUrl = `https://archive-api.open-meteo.com/v1/archive`
-                    + `?latitude=${lat}&longitude=${lon}`
-                    + `&start_date=${dateStr}&end_date=${dateStr}`
-                    + `&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m`
-                    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`
-                    + `&temperature_unit=fahrenheit`
-                    + `&wind_speed_unit=kn`
-                    + `&precipitation_unit=inch`
-                    + `&timezone=auto`;
-
-                const wxRes = await fetch(wxUrl);
-                const raw   = await wxRes.json();
-
-                if (raw.error) throw new Error(raw.reason ?? 'API error');
-                if (!raw.hourly) throw new Error('No hourly data returned');
-
-                const h = raw.hourly;
-                const d = raw.daily;
-
-                // Average all 24 completed hours
-                const avg = key => {
-                    const vals = h[key].filter(v => v !== null && v !== undefined);
-                    return vals.reduce((a, b) => a + b, 0) / vals.length;
-                };
-
-                const dewPoint = h.dew_point_2m
-                    ? avg('dew_point_2m')
-                    : avg('temperature_2m') - ((100 - avg('relative_humidity_2m')) / 5);
-
-                // yesterday's date info
-                const mon = yesterday.getMonth() + 1;
-                const doy = Math.floor((yesterday - new Date(yesterday.getFullYear(), 0, 0)) / 86400000);
-
-                document.getElementById('latitude').value    = lat.toFixed(2);
-                document.getElementById('longitude').value   = lon.toFixed(2);
-                document.getElementById('elevation').value   = Math.round(elev);
-                document.getElementById('temp').value        = avg('temperature_2m').toFixed(1);
-                document.getElementById('dewp').value        = dewPoint.toFixed(1);
-                document.getElementById('slp').value         = avg('pressure_msl').toFixed(1);
-                document.getElementById('wdsp').value        = avg('wind_speed_10m').toFixed(1);
-                document.getElementById('max_temp').value    = d.temperature_2m_max[0].toFixed(1);
-                document.getElementById('min_temp').value    = d.temperature_2m_min[0].toFixed(1);
-                document.getElementById('prcp').value        = (d.precipitation_sum[0] ?? 0).toFixed(2);
-                document.getElementById('month').value       = mon;
-                document.getElementById('day_of_year').value = doy;
-
-                document.querySelectorAll('.weather-form input').forEach(el => {
-                    el.classList.add('flash');
-                    setTimeout(() => el.classList.remove('flash'), 600);
-                });
-
-                sname.textContent = `📅 ${dateStr} — full day avg (24 hrs) · predict today`;
-                sname.classList.add('visible');
-
-            } catch (err) {
-                console.error('Yesterday fetch error:', err);
-                sname.textContent = `⚠️ ${err.message}`;
-                sname.classList.add('visible');
-            }
-
-            btn.classList.remove('loading');
-            btn.disabled = false;
-            label.textContent = 'Yesterday\'s Data';
-        },
-        (err) => {
-            btn.classList.remove('loading');
-            btn.disabled = false;
-            label.textContent = 'Yesterday\'s Data';
-            const msgs = { 1: '⚠️ Location access denied.', 2: '⚠️ Could not determine location.', 3: '⚠️ Request timed out.' };
-            sname.textContent = msgs[err.code] || '⚠️ Location error.';
-            sname.classList.add('visible');
-        },
-        { timeout: 10000 }
-    );
-}
-
-
-async function fetchMyLocation() {
-    const btn   = document.getElementById('loc-btn');
-    const label = document.getElementById('loc-label');
-    const sname = document.getElementById('scenario-name');
-
-    if (!navigator.geolocation) {
-        sname.textContent = '⚠️ Geolocation not supported by your browser.';
-        sname.classList.add('visible');
-        return;
-    }
-
-    // Loading state
-    btn.classList.add('loading');
-    btn.disabled = true;
-    label.textContent = 'Locating…';
-    sname.classList.remove('visible');
-
-    navigator.geolocation.getCurrentPosition(
-        async ({ coords }) => {
-            const { latitude: lat, longitude: lon } = coords;
-            label.textContent = 'Fetching weather…';
-
-            try {
-                // Step 1: Elevation
-                const elevRes = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
-                const elevData = await elevRes.json();
-                const elev = elevData.elevation?.[0] ?? 0;
-
-                // Step 2: Hourly + daily for today only
-                const wxUrl = `https://api.open-meteo.com/v1/forecast`
-                    + `?latitude=${lat}&longitude=${lon}`
-                    + `&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m`
-                    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`
-                    + `&temperature_unit=fahrenheit`
-                    + `&wind_speed_unit=kn`
-                    + `&precipitation_unit=inch`
-                    + `&timezone=auto`
-                    + `&forecast_days=1`;
-
-                const wxRes = await fetch(wxUrl);
-                const raw   = await wxRes.json();
-
-                if (raw.error) throw new Error(raw.reason ?? 'API error');
-                if (!raw.hourly) throw new Error('No hourly data returned');
-
-                const h = raw.hourly;
-                const d = raw.daily;
-
-                // Take all 24 hours of today and average them up to the current hour
-                // Use the number of time entries returned (always 24 for forecast_days=1)
-                // then only average hours 0..now using the UTC offset the API gives us
-                const utcOffsetSec = raw.utc_offset_seconds ?? 0;
-                const localNowHr  = Math.floor((Date.now() / 1000 + utcOffsetSec) / 3600) % 24;
-                // Clamp: at minimum use 1 hour so we never divide by 0
-                const cutoff = Math.max(1, Math.min(localNowHr + 1, h.time.length));
-
-                const avg = key => {
-                    const vals = h[key].slice(0, cutoff).filter(v => v !== null && v !== undefined);
-                    return vals.reduce((a, b) => a + b, 0) / vals.length;
-                };
-
-                const dewPoint = h.dew_point_2m
-                    ? avg('dew_point_2m')
-                    : avg('temperature_2m') - ((100 - avg('relative_humidity_2m')) / 5);
-
-                const now = new Date();
-                const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
-
-                document.getElementById('latitude').value    = lat.toFixed(2);
-                document.getElementById('longitude').value   = lon.toFixed(2);
-                document.getElementById('elevation').value   = Math.round(elev);
-                document.getElementById('temp').value        = avg('temperature_2m').toFixed(1);
-                document.getElementById('dewp').value        = dewPoint.toFixed(1);
-                document.getElementById('slp').value         = avg('pressure_msl').toFixed(1);
-                document.getElementById('wdsp').value        = avg('wind_speed_10m').toFixed(1);
-                document.getElementById('max_temp').value    = d.temperature_2m_max[0].toFixed(1);
-                document.getElementById('min_temp').value    = d.temperature_2m_min[0].toFixed(1);
-                document.getElementById('prcp').value        = (d.precipitation_sum[0] ?? 0).toFixed(2);
-                document.getElementById('month').value       = now.getMonth() + 1;
-                document.getElementById('day_of_year').value = doy;
-
-                document.querySelectorAll('.weather-form input').forEach(el => {
-                    el.classList.add('flash');
-                    setTimeout(() => el.classList.remove('flash'), 600);
-                });
-
-                sname.textContent = `📍 ${lat.toFixed(2)}°, ${lon.toFixed(2)}° — avg of ${cutoff} hrs`;
-                sname.classList.add('visible');
-
-            } catch (err) {
-                console.error('Weather fetch error:', err);
-                sname.textContent = `⚠️ ${err.message}`;
-                sname.classList.add('visible');
-            }
-
-            btn.classList.remove('loading');
-            btn.disabled = false;
-            label.textContent = 'Your Location';
-        },
-        (err) => {
-            btn.classList.remove('loading');
-            btn.disabled = false;
-            label.textContent = 'Your Location';
-
-            const msgs = {
-                1: '⚠️ Location access denied. Please allow it in your browser.',
-                2: '⚠️ Could not determine your location.',
-                3: '⚠️ Location request timed out.',
-            };
-            sname.textContent = msgs[err.code] || '⚠️ Location error.';
-            sname.classList.add('visible');
-        },
-        { timeout: 10000 }
-    );
-}
 const scenarios = {{ scenarios | tojson }};
 
 function randomizeInputs() {
     const s = scenarios[Math.floor(Math.random() * scenarios.length)];
-    document.getElementById('latitude').value   = s.latitude;
-    document.getElementById('longitude').value  = s.longitude;
-    document.getElementById('elevation').value  = s.elevation;
-    document.getElementById('temp').value       = s.temp;
-    document.getElementById('dewp').value       = s.dewp;
-    document.getElementById('slp').value        = s.slp;
-    document.getElementById('wdsp').value       = s.wdsp;
-    document.getElementById('max_temp').value   = s.max_temp;
-    document.getElementById('min_temp').value   = s.min_temp;
-    document.getElementById('prcp').value       = s.prcp;
-    document.getElementById('month').value      = s.month;
-    document.getElementById('day_of_year').value = s.day_of_year;
-    document.getElementById('scenario-name').textContent = s.name;
-    document.getElementById('scenario-name').classList.add('visible');
-
-    // Flash animation on all inputs
+    ['latitude','longitude','elevation','temp','dewp','slp','wdsp','max_temp','min_temp','prcp','month','day_of_year']
+        .forEach(f => { const el = document.getElementById(f); if(el) el.value = s[f]; });
+    const tag = document.getElementById('scenario-name');
+    tag.textContent = s.name; tag.classList.add('visible');
     document.querySelectorAll('.weather-form input').forEach(el => {
-        el.classList.add('flash');
-        setTimeout(() => el.classList.remove('flash'), 600);
+        el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 600);
     });
 }
 
-// ── Modals ──
-function openModal(id) {
-    document.getElementById(id).classList.add('active');
-    document.body.style.overflow = 'hidden';
+async function fetchMyLocation() {
+    const btn = document.getElementById('loc-btn'), lbl = document.getElementById('loc-label'), tag = document.getElementById('scenario-name');
+    if (!navigator.geolocation) { tag.textContent='⚠️ Geolocation not supported'; tag.classList.add('visible'); return; }
+    btn.classList.add('loading'); btn.disabled=true; lbl.textContent='Locating…'; tag.classList.remove('visible');
+    navigator.geolocation.getCurrentPosition(async ({coords}) => {
+        const {latitude:lat, longitude:lon} = coords;
+        lbl.textContent = 'Fetching weather…';
+        try {
+            const elevRes = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+            const elev = (await elevRes.json()).elevation?.[0] ?? 0;
+            const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&wind_speed_unit=kn&precipitation_unit=inch&timezone=auto&forecast_days=1`);
+            const raw = await wxRes.json();
+            if (raw.error) throw new Error(raw.reason ?? 'API error');
+            const h=raw.hourly, d=raw.daily;
+            const off=raw.utc_offset_seconds??0;
+            const cutoff=Math.max(1,Math.min(Math.floor((Date.now()/1000+off)/3600)%24+1,h.time.length));
+            const avg=k=>{const v=h[k].slice(0,cutoff).filter(x=>x!=null);return v.reduce((a,b)=>a+b,0)/v.length;};
+            const dp=h.dew_point_2m?avg('dew_point_2m'):avg('temperature_2m')-((100-avg('relative_humidity_2m'))/5);
+            const now=new Date(), doy=Math.floor((now-new Date(now.getFullYear(),0,0))/86400000);
+            const vals={latitude:lat.toFixed(2),longitude:lon.toFixed(2),elevation:Math.round(elev),temp:avg('temperature_2m').toFixed(1),dewp:dp.toFixed(1),slp:avg('pressure_msl').toFixed(1),wdsp:avg('wind_speed_10m').toFixed(1),max_temp:d.temperature_2m_max[0].toFixed(1),min_temp:d.temperature_2m_min[0].toFixed(1),prcp:(d.precipitation_sum[0]??0).toFixed(2),month:now.getMonth()+1,day_of_year:doy};
+            Object.entries(vals).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});
+            document.querySelectorAll('.weather-form input').forEach(el=>{el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),600);});
+            tag.textContent=`📍 ${(+lat).toFixed(2)}°, ${(+lon).toFixed(2)}° — avg of ${cutoff} hrs`; tag.classList.add('visible');
+        } catch(e) { tag.textContent=`⚠️ ${e.message}`; tag.classList.add('visible'); }
+        btn.classList.remove('loading'); btn.disabled=false; lbl.textContent='Your Location';
+    }, err=>{
+        btn.classList.remove('loading'); btn.disabled=false; lbl.textContent='Your Location';
+        tag.textContent={1:'⚠️ Location access denied.',2:'⚠️ Could not determine location.',3:'⚠️ Timed out.'}[err.code]||'⚠️ Error.'; tag.classList.add('visible');
+    }, {timeout:10000});
 }
-function closeModal(id) {
-    document.getElementById(id).classList.remove('active');
-    document.body.style.overflow = '';
+
+async function fetchYesterday() {
+    const btn=document.getElementById('yday-btn'), lbl=document.getElementById('yday-label'), tag=document.getElementById('scenario-name');
+    if (!navigator.geolocation) { tag.textContent='⚠️ Geolocation not supported'; tag.classList.add('visible'); return; }
+    btn.classList.add('loading'); btn.disabled=true; lbl.textContent='Locating…'; tag.classList.remove('visible');
+    navigator.geolocation.getCurrentPosition(async ({coords}) => {
+        const {latitude:lat, longitude:lon}=coords; lbl.textContent='Fetching yesterday…';
+        try {
+            const yday=new Date(); yday.setDate(yday.getDate()-1); const ds=yday.toISOString().slice(0,10);
+            const elevRes=await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+            const elev=(await elevRes.json()).elevation?.[0]??0;
+            const wxRes=await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${lat}&longitude=${lon}&start_date=${ds}&end_date=${ds}&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&wind_speed_unit=kn&precipitation_unit=inch&timezone=auto`);
+            const raw=await wxRes.json();
+            if (raw.error) throw new Error(raw.reason??'API error');
+            const h=raw.hourly, d=raw.daily;
+            const avg=k=>{const v=h[k].filter(x=>x!=null);return v.reduce((a,b)=>a+b,0)/v.length;};
+            const dp=h.dew_point_2m?avg('dew_point_2m'):avg('temperature_2m')-((100-avg('relative_humidity_2m'))/5);
+            const mon=yday.getMonth()+1, doy=Math.floor((yday-new Date(yday.getFullYear(),0,0))/86400000);
+            const vals={latitude:lat.toFixed(2),longitude:lon.toFixed(2),elevation:Math.round(elev),temp:avg('temperature_2m').toFixed(1),dewp:dp.toFixed(1),slp:avg('pressure_msl').toFixed(1),wdsp:avg('wind_speed_10m').toFixed(1),max_temp:d.temperature_2m_max[0].toFixed(1),min_temp:d.temperature_2m_min[0].toFixed(1),prcp:(d.precipitation_sum[0]??0).toFixed(2),month:mon,day_of_year:doy};
+            Object.entries(vals).forEach(([k,v])=>{const el=document.getElementById(k);if(el)el.value=v;});
+            document.querySelectorAll('.weather-form input').forEach(el=>{el.classList.add('flash');setTimeout(()=>el.classList.remove('flash'),600);});
+            tag.textContent=`📅 ${ds} — full day avg (24 hrs) · predict today`; tag.classList.add('visible');
+        } catch(e) { tag.textContent=`⚠️ ${e.message}`; tag.classList.add('visible'); }
+        btn.classList.remove('loading'); btn.disabled=false; lbl.textContent="Yesterday's Data";
+    }, err=>{
+        btn.classList.remove('loading'); btn.disabled=false; lbl.textContent="Yesterday's Data";
+        tag.textContent={1:'⚠️ Location access denied.',2:'⚠️ Could not determine location.',3:'⚠️ Timed out.'}[err.code]||'⚠️ Error.'; tag.classList.add('visible');
+    }, {timeout:10000});
 }
+
+function openModal(id)  { document.getElementById(id).classList.add('active'); document.body.style.overflow='hidden'; }
+function closeModal(id) { document.getElementById(id).classList.remove('active'); document.body.style.overflow=''; }
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+    if(e.key==='Escape') document.querySelectorAll('.modal-overlay.active').forEach(m=>{m.classList.remove('active'); document.body.style.overflow='';});
 });
 
-// ── Auto-fill today's date ──
-const today = new Date();
-const doy = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
-if (!document.getElementById('month').value) document.getElementById('month').value = today.getMonth() + 1;
-if (!document.getElementById('day_of_year').value) document.getElementById('day_of_year').value = doy;
+const today=new Date(), doy=Math.floor((today-new Date(today.getFullYear(),0,0))/86400000);
+const mEl=document.getElementById('month'), dEl=document.getElementById('day_of_year');
+if(mEl&&!mEl.value) mEl.value=today.getMonth()+1;
+if(dEl&&!dEl.value) dEl.value=doy;
 
-// ── Background particles ──
-const canvas = document.createElement('canvas');
-const particles = document.getElementById('particles');
-particles.appendChild(canvas);
-const ctx = canvas.getContext('2d');
-let pts = [];
-
-function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-resize();
-window.addEventListener('resize', resize);
-
-for (let i = 0; i < 60; i++) {
-    pts.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height,
-               r: Math.random()*1.5+0.5, dx: (Math.random()-0.5)*0.3, dy: (Math.random()-0.5)*0.3,
-               o: Math.random()*0.4+0.1 });
-}
-
-function draw() {
+// Particles
+const canvas=document.createElement('canvas');
+document.getElementById('particles').appendChild(canvas);
+const ctx=canvas.getContext('2d'); let pts=[];
+const resize=()=>{canvas.width=innerWidth;canvas.height=innerHeight;};
+resize(); window.addEventListener('resize',resize);
+for(let i=0;i<60;i++) pts.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*1.5+0.4,dx:(Math.random()-.5)*.28,dy:(Math.random()-.5)*.28,o:Math.random()*.38+0.06});
+(function draw(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    pts.forEach(p => {
-        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
-        ctx.fillStyle = `rgba(0,212,255,${p.o})`; ctx.fill();
-        p.x+=p.dx; p.y+=p.dy;
-        if(p.x<0||p.x>canvas.width) p.dx*=-1;
-        if(p.y<0||p.y>canvas.height) p.dy*=-1;
+    pts.forEach(p=>{
+        ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=`rgba(0,212,255,${p.o})`;ctx.fill();
+        p.x+=p.dx;p.y+=p.dy;
+        if(p.x<0||p.x>canvas.width)p.dx*=-1;
+        if(p.y<0||p.y>canvas.height)p.dy*=-1;
     });
     requestAnimationFrame(draw);
-}
-draw();
+})();
 </script>
 </body>
 </html>
