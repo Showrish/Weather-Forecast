@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherCast ML — Predictive Weather Forecasting</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- Animated background particles -->
+<div class="bg-particles" id="particles"></div>
+
+<div class="container">
+
+    <!-- ── HEADER ── -->
+    <header>
+        <h1>WeatherCast <span class="gradient-text">ML</span></h1>
+        <p class="subtitle">3 LightGBM models · 64 million training records · Real-time predictions</p>
+        <div class="header-stats">
+            <div class="stat"><span class="stat-num">96.7%</span><span class="stat-lbl">Temp Accuracy</span></div>
+            <div class="stat-div"></div>
+            <div class="stat"><span class="stat-num">64M</span><span class="stat-lbl">Records Trained</span></div>
+            <div class="stat-div"></div>
+            <div class="stat"><span class="stat-num">3</span><span class="stat-lbl">ML Models</span></div>
+        </div>
+    </header>
+
+    <!-- ── RESULTS ── -->
+    {% if show_results %}
+    <section class="results-section animate-in">
+        <div class="results-hero">
+            <div class="hero-icon">{{ results.weather_icon }}</div>
+            <div class="hero-info">
+                <div class="hero-temp">{{ results.predicted_temp }}°F</div>
+                <div class="hero-label">Tomorrow's Predicted Temperature</div>
+                <div class="hero-sub">📍 {{ results.input_location }} · Today: {{ results.input_temp }}°F</div>
+            </div>
+        </div>
+
+        <div class="results-grid">
+            <div class="result-card temp-card">
+                <div class="rc-header">
+                    <span class="rc-icon">🌡️</span>
+                    <span class="rc-title">Temperature</span>
+                </div>
+                <div class="rc-value">{{ results.predicted_temp }}°F</div>
+                <div class="rc-bar">
+                    <div class="rc-bar-fill" style="width: {{ [[(results.predicted_temp + 40) / 160 * 100, 0]|max, 100]|min }}%; background: linear-gradient(90deg,#2196F3,#FF5722);"></div>
+                </div>
+                <div class="rc-detail">Today was {{ results.input_temp }}°F</div>
+            </div>
+
+            <div class="result-card rain-card">
+                <div class="rc-header">
+                    <span class="rc-icon">🌧️</span>
+                    <span class="rc-title">Rain Tomorrow</span>
+                </div>
+                <div class="rc-value {% if results.rain_prediction == 'Yes' %}rain-yes{% else %}rain-no{% endif %}">
+                    {{ results.rain_prediction }}
+                </div>
+                <div class="rc-bar">
+                    <div class="rc-bar-fill" style="width: {{ results.rain_probability }}%; background: linear-gradient(90deg,#00b4d8,#0077b6);"></div>
+                </div>
+                <div class="rc-detail">{{ results.rain_probability }}% probability</div>
+            </div>
+
+            <div class="result-card alert-card" style="--alert-color: {{ results.alert_color }};">
+                <div class="rc-header">
+                    <span class="rc-icon">⚠️</span>
+                    <span class="rc-title">Weather Alert</span>
+                </div>
+                <div class="rc-value" style="color: {{ results.alert_color }};">{{ results.extreme_alert }}</div>
+                <div class="alert-badge" style="background: {{ results.alert_color }}20; border: 1px solid {{ results.alert_color }}; color: {{ results.alert_color }};">
+                    {% if results.extreme_code == 0 %}✅ All Clear
+                    {% elif results.extreme_code == 1 %}🔥 Heat Advisory
+                    {% elif results.extreme_code == 2 %}🥶 Cold Advisory
+                    {% elif results.extreme_code == 3 %}⛈️ Storm Warning
+                    {% elif results.extreme_code == 4 %}❄️ Snow Advisory
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="results-actions">
+            <a href="/" class="btn-primary">🔄 New Prediction</a>
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- ── FORM ── -->
+    <section class="form-section {% if show_results %}hidden{% endif %}">
+        <div class="form-header">
+            <h2>Enter Weather Conditions</h2>
+            <p>Fill in today's weather data to predict tomorrow's forecast</p>
+        </div>
+
+        <div class="quick-actions">
+            <button type="button" class="btn-randomize" onclick="randomizeInputs()">
+                🎲 Randomize Inputs
+            </button>
+            <button type="button" class="btn-location" id="loc-btn" onclick="fetchMyLocation()">
+                <span class="loc-icon">📍</span>
+                <span id="loc-label">Your Location</span>
+            </button>
+            <button type="button" class="btn-yesterday" id="yday-btn" onclick="fetchYesterday()">
+                <span class="yday-icon">📅</span>
+                <span id="yday-label">Yesterday's Data</span>
+            </button>
+            <span id="scenario-name" class="scenario-label"></span>
+        </div>
+
+        <form action="/predict" method="POST" class="weather-form">
+
+            <div class="form-section-label">📍 Location</div>
+            <div class="form-row cols-3">
+                <div class="form-group">
+                    <label>Latitude</label>
+                    <input type="number" id="latitude" name="latitude" step="0.01" placeholder="40.71" required>
+                </div>
+                <div class="form-group">
+                    <label>Longitude</label>
+                    <input type="number" id="longitude" name="longitude" step="0.01" placeholder="-74.01" required>
+                </div>
+                <div class="form-group">
+                    <label>Elevation (m)</label>
+                    <input type="number" id="elevation" name="elevation" step="1" placeholder="10" value="0">
+                </div>
+            </div>
+
+            <div class="form-section-label">🌡️ Temperature</div>
+            <div class="form-row cols-3">
+                <div class="form-group">
+                    <label>Current Temp (°F)</label>
+                    <input type="number" id="temp" name="temp" step="0.1" placeholder="72" required>
+                </div>
+                <div class="form-group">
+                    <label>Today's High (°F)</label>
+                    <input type="number" id="max_temp" name="max_temp" step="0.1" placeholder="78" required>
+                </div>
+                <div class="form-group">
+                    <label>Today's Low (°F)</label>
+                    <input type="number" id="min_temp" name="min_temp" step="0.1" placeholder="65" required>
+                </div>
+            </div>
+
+            <div class="form-section-label">🌬️ Atmospheric</div>
+            <div class="form-row cols-3">
+                <div class="form-group">
+                    <label>Dew Point (°F)</label>
+                    <input type="number" id="dewp" name="dewp" step="0.1" placeholder="55" required>
+                </div>
+                <div class="form-group">
+                    <label>Pressure (mb)</label>
+                    <input type="number" id="slp" name="slp" step="0.1" placeholder="1013" value="1013">
+                </div>
+                <div class="form-group">
+                    <label>Wind Speed (knots)</label>
+                    <input type="number" id="wdsp" name="wdsp" step="0.1" placeholder="8" value="5">
+                </div>
+            </div>
+
+            <div class="form-section-label">📅 Date & Precipitation</div>
+            <div class="form-row cols-3">
+                <div class="form-group">
+                    <label>Precipitation (in)</label>
+                    <input type="number" id="prcp" name="prcp" step="0.01" placeholder="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label>Month (1–12)</label>
+                    <input type="number" id="month" name="month" min="1" max="12" placeholder="6" required>
+                </div>
+                <div class="form-group">
+                    <label>Day of Year (1–365)</label>
+                    <input type="number" id="day_of_year" name="day_of_year" min="1" max="365" placeholder="172" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-predict">
+                <span class="btn-icon">🔮</span>
+                Predict Tomorrow's Weather
+            </button>
+        </form>
+    </section>
+
+    <!-- ── MODEL INFO ── -->
+    <section class="models-section">
+        <h2>About the Models</h2>
+        <p class="models-subtitle">Click any model to learn more</p>
+        <div class="model-cards">
+
+            <div class="model-card" onclick="openModal('temp-modal')">
+                <div class="mc-glow" style="--glow: #FF5722;"></div>
+                <div class="mc-icon">🌡️</div>
+                <h3>Temperature Model</h3>
+                <p>Predicts next-day temperature in °F</p>
+                <div class="mc-stats">
+                    <span class="mc-badge green">R² 96.7%</span>
+                    <span class="mc-badge blue">MAE 2.88°F</span>
+                </div>
+                <div class="mc-footer">Regression · LightGBM <span class="mc-arrow">→</span></div>
+            </div>
+
+            <div class="model-card" onclick="openModal('rain-modal')">
+                <div class="mc-glow" style="--glow: #00b4d8;"></div>
+                <div class="mc-icon">🌧️</div>
+                <h3>Rain Prediction</h3>
+                <p>Forecasts whether it will rain tomorrow</p>
+                <div class="mc-stats">
+                    <span class="mc-badge blue">Binary Output</span>
+                    <span class="mc-badge purple">Probability</span>
+                </div>
+                <div class="mc-footer">Classification · LightGBM <span class="mc-arrow">→</span></div>
+            </div>
+
+            <div class="model-card" onclick="openModal('extreme-modal')">
+                <div class="mc-glow" style="--glow: #9C27B0;"></div>
+                <div class="mc-icon">⚠️</div>
+                <h3>Extreme Weather</h3>
+                <p>Detects Heat, Cold, Storm, or Snow events</p>
+                <div class="mc-stats">
+                    <span class="mc-badge purple">5 Classes</span>
+                    <span class="mc-badge orange">Alerts</span>
+                </div>
+                <div class="mc-footer">Multi-class · LightGBM <span class="mc-arrow">→</span></div>
+            </div>
+
+        </div>
+    </section>
+
+    <footer>
+        <p>Built with FastAPI + LightGBM · Big Data Project 2026</p>
+    </footer>
+</div>
+
+<!-- ── MODALS ── -->
+<div class="modal-overlay" id="temp-modal" onclick="closeModal('temp-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal('temp-modal')">✕</button>
+        <div class="modal-icon">🌡️</div>
+        <h2>Temperature Prediction Model</h2>
+        <div class="modal-section">
+            <h4>Overview</h4>
+            <p>A LightGBM regression model that predicts next-day temperature using today's atmospheric conditions. Trained on over 64 million NOAA Global Surface Summary of Day (GSOD) records.</p>
+        </div>
+        <div class="modal-stats-grid">
+            <div class="modal-stat"><span>R²</span><strong>0.9669</strong></div>
+            <div class="modal-stat"><span>MAE</span><strong>2.88°F</strong></div>
+            <div class="modal-stat"><span>Within ±5°F</span><strong>~92%</strong></div>
+            <div class="modal-stat"><span>Training Rows</span><strong>64M</strong></div>
+        </div>
+        <div class="modal-section">
+            <h4>Key Features Used</h4>
+            <div class="feature-tags">
+                <span>TEMP</span><span>DEWP</span><span>MAX/MIN</span><span>WDSP</span>
+                <span>SLP</span><span>PRCP</span><span>7-day lag</span><span>14-day lag</span>
+                <span>Rolling means</span><span>Cyclical month/day</span>
+            </div>
+        </div>
+        <div class="modal-section">
+            <h4>How It Works</h4>
+            <p>The model uses gradient boosted decision trees with 45 engineered features including lag temperatures (1, 3, 7, 14 days), 7 and 30-day rolling averages, cyclical sine/cosine encodings for seasonality, and atmospheric pressure trends.</p>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="rain-modal" onclick="closeModal('rain-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal('rain-modal')">✕</button>
+        <div class="modal-icon">🌧️</div>
+        <h2>Rain Prediction Model</h2>
+        <div class="modal-section">
+            <h4>Overview</h4>
+            <p>A binary classification model that predicts whether rain will occur tomorrow. Also outputs a probability score (0–100%) indicating confidence in rain occurring.</p>
+        </div>
+        <div class="modal-stats-grid">
+            <div class="modal-stat"><span>Task</span><strong>Binary</strong></div>
+            <div class="modal-stat"><span>Output</span><strong>Yes / No</strong></div>
+            <div class="modal-stat"><span>Probability</span><strong>0–100%</strong></div>
+            <div class="modal-stat"><span>Algorithm</span><strong>LightGBM</strong></div>
+        </div>
+        <div class="modal-section">
+            <h4>Key Features Used</h4>
+            <div class="feature-tags">
+                <span>PRCP lag</span><span>DEWP</span><span>SLP trend</span><span>WDSP</span>
+                <span>Humidity proxy</span><span>Rolling precip</span><span>Season</span>
+            </div>
+        </div>
+        <div class="modal-section">
+            <h4>How It Works</h4>
+            <p>Uses dew point depression, precipitation history, and pressure trends as primary signals. Low pressure combined with high dew point and recent precipitation are the strongest rain predictors. The model outputs both a hard label and a probability via predict_proba.</p>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="extreme-modal" onclick="closeModal('extreme-modal')">
+    <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal('extreme-modal')">✕</button>
+        <div class="modal-icon">⚠️</div>
+        <h2>Extreme Weather Alert Model</h2>
+        <div class="modal-section">
+            <h4>Overview</h4>
+            <p>A multi-class classification model that identifies extreme weather conditions. Outputs one of 5 categories to help users prepare for dangerous weather events.</p>
+        </div>
+        <div class="modal-stats-grid">
+            <div class="modal-stat"><span>Class 0</span><strong style="color:#4CAF50">✅ Normal</strong></div>
+            <div class="modal-stat"><span>Class 1</span><strong style="color:#FF5722">🔥 Heat</strong></div>
+            <div class="modal-stat"><span>Class 2</span><strong style="color:#2196F3">🥶 Cold</strong></div>
+            <div class="modal-stat"><span>Class 3</span><strong style="color:#9C27B0">⛈️ Storm</strong></div>
+            <div class="modal-stat"><span>Class 4</span><strong style="color:#00BCD4">❄️ Snow</strong></div>
+        </div>
+        <div class="modal-section">
+            <h4>Key Features Used</h4>
+            <div class="feature-tags">
+                <span>TEMP extremes</span><span>WDSP</span><span>PRCP</span>
+                <span>SNDP</span><span>SLP drops</span><span>GUST</span><span>Season</span>
+            </div>
+        </div>
+        <div class="modal-section">
+            <h4>How It Works</h4>
+            <p>Detects threshold-crossing patterns: temperatures above 95°F trigger heat alerts, below 10°F trigger cold alerts. Rapid pressure drops combined with strong winds signal storm risk. Snow depth and sub-freezing temps activate snow advisories.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// ── Yesterday's Data ──
+async function fetchYesterday() {
+    const btn   = document.getElementById('yday-btn');
+    const label = document.getElementById('yday-label');
+    const sname = document.getElementById('scenario-name');
+
+    if (!navigator.geolocation) {
+        sname.textContent = '⚠️ Geolocation not supported by your browser.';
+        sname.classList.add('visible');
+        return;
+    }
+
+    btn.classList.add('loading');
+    btn.disabled = true;
+    label.textContent = 'Locating…';
+    sname.classList.remove('visible');
+
+    navigator.geolocation.getCurrentPosition(
+        async ({ coords }) => {
+            const { latitude: lat, longitude: lon } = coords;
+            label.textContent = 'Fetching yesterday…';
+
+            try {
+                // Build yesterday's date string YYYY-MM-DD
+                const elevRes  = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+                const elevData = await elevRes.json();
+                const elev     = elevData.elevation?.[0] ?? 0;
+
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const dateStr = yesterday.toISOString().slice(0, 10); // "2025-02-28"
+
+                // Use historical API with start_date = end_date = yesterday → full 24 hrs
+                const wxUrl = `https://archive-api.open-meteo.com/v1/archive`
+                    + `?latitude=${lat}&longitude=${lon}`
+                    + `&start_date=${dateStr}&end_date=${dateStr}`
+                    + `&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m`
+                    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`
+                    + `&temperature_unit=fahrenheit`
+                    + `&wind_speed_unit=kn`
+                    + `&precipitation_unit=inch`
+                    + `&timezone=auto`;
+
+                const wxRes = await fetch(wxUrl);
+                const raw   = await wxRes.json();
+
+                if (raw.error) throw new Error(raw.reason ?? 'API error');
+                if (!raw.hourly) throw new Error('No hourly data returned');
+
+                const h = raw.hourly;
+                const d = raw.daily;
+
+                // Average all 24 completed hours
+                const avg = key => {
+                    const vals = h[key].filter(v => v !== null && v !== undefined);
+                    return vals.reduce((a, b) => a + b, 0) / vals.length;
+                };
+
+                const dewPoint = h.dew_point_2m
+                    ? avg('dew_point_2m')
+                    : avg('temperature_2m') - ((100 - avg('relative_humidity_2m')) / 5);
+
+                // yesterday's date info
+                const mon = yesterday.getMonth() + 1;
+                const doy = Math.floor((yesterday - new Date(yesterday.getFullYear(), 0, 0)) / 86400000);
+
+                document.getElementById('latitude').value    = lat.toFixed(2);
+                document.getElementById('longitude').value   = lon.toFixed(2);
+                document.getElementById('elevation').value   = Math.round(elev);
+                document.getElementById('temp').value        = avg('temperature_2m').toFixed(1);
+                document.getElementById('dewp').value        = dewPoint.toFixed(1);
+                document.getElementById('slp').value         = avg('pressure_msl').toFixed(1);
+                document.getElementById('wdsp').value        = avg('wind_speed_10m').toFixed(1);
+                document.getElementById('max_temp').value    = d.temperature_2m_max[0].toFixed(1);
+                document.getElementById('min_temp').value    = d.temperature_2m_min[0].toFixed(1);
+                document.getElementById('prcp').value        = (d.precipitation_sum[0] ?? 0).toFixed(2);
+                document.getElementById('month').value       = mon;
+                document.getElementById('day_of_year').value = doy;
+
+                document.querySelectorAll('.weather-form input').forEach(el => {
+                    el.classList.add('flash');
+                    setTimeout(() => el.classList.remove('flash'), 600);
+                });
+
+                sname.textContent = `📅 ${dateStr} — full day avg (24 hrs) · predict today`;
+                sname.classList.add('visible');
+
+            } catch (err) {
+                console.error('Yesterday fetch error:', err);
+                sname.textContent = `⚠️ ${err.message}`;
+                sname.classList.add('visible');
+            }
+
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            label.textContent = 'Yesterday\'s Data';
+        },
+        (err) => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            label.textContent = 'Yesterday\'s Data';
+            const msgs = { 1: '⚠️ Location access denied.', 2: '⚠️ Could not determine location.', 3: '⚠️ Request timed out.' };
+            sname.textContent = msgs[err.code] || '⚠️ Location error.';
+            sname.classList.add('visible');
+        },
+        { timeout: 10000 }
+    );
+}
+
+
+async function fetchMyLocation() {
+    const btn   = document.getElementById('loc-btn');
+    const label = document.getElementById('loc-label');
+    const sname = document.getElementById('scenario-name');
+
+    if (!navigator.geolocation) {
+        sname.textContent = '⚠️ Geolocation not supported by your browser.';
+        sname.classList.add('visible');
+        return;
+    }
+
+    // Loading state
+    btn.classList.add('loading');
+    btn.disabled = true;
+    label.textContent = 'Locating…';
+    sname.classList.remove('visible');
+
+    navigator.geolocation.getCurrentPosition(
+        async ({ coords }) => {
+            const { latitude: lat, longitude: lon } = coords;
+            label.textContent = 'Fetching weather…';
+
+            try {
+                // Step 1: Elevation
+                const elevRes = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+                const elevData = await elevRes.json();
+                const elev = elevData.elevation?.[0] ?? 0;
+
+                // Step 2: Hourly + daily for today only
+                const wxUrl = `https://api.open-meteo.com/v1/forecast`
+                    + `?latitude=${lat}&longitude=${lon}`
+                    + `&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m`
+                    + `&daily=temperature_2m_max,temperature_2m_min,precipitation_sum`
+                    + `&temperature_unit=fahrenheit`
+                    + `&wind_speed_unit=kn`
+                    + `&precipitation_unit=inch`
+                    + `&timezone=auto`
+                    + `&forecast_days=1`;
+
+                const wxRes = await fetch(wxUrl);
+                const raw   = await wxRes.json();
+
+                if (raw.error) throw new Error(raw.reason ?? 'API error');
+                if (!raw.hourly) throw new Error('No hourly data returned');
+
+                const h = raw.hourly;
+                const d = raw.daily;
+
+                // Take all 24 hours of today and average them up to the current hour
+                // Use the number of time entries returned (always 24 for forecast_days=1)
+                // then only average hours 0..now using the UTC offset the API gives us
+                const utcOffsetSec = raw.utc_offset_seconds ?? 0;
+                const localNowHr  = Math.floor((Date.now() / 1000 + utcOffsetSec) / 3600) % 24;
+                // Clamp: at minimum use 1 hour so we never divide by 0
+                const cutoff = Math.max(1, Math.min(localNowHr + 1, h.time.length));
+
+                const avg = key => {
+                    const vals = h[key].slice(0, cutoff).filter(v => v !== null && v !== undefined);
+                    return vals.reduce((a, b) => a + b, 0) / vals.length;
+                };
+
+                const dewPoint = h.dew_point_2m
+                    ? avg('dew_point_2m')
+                    : avg('temperature_2m') - ((100 - avg('relative_humidity_2m')) / 5);
+
+                const now = new Date();
+                const doy = Math.floor((now - new Date(now.getFullYear(), 0, 0)) / 86400000);
+
+                document.getElementById('latitude').value    = lat.toFixed(2);
+                document.getElementById('longitude').value   = lon.toFixed(2);
+                document.getElementById('elevation').value   = Math.round(elev);
+                document.getElementById('temp').value        = avg('temperature_2m').toFixed(1);
+                document.getElementById('dewp').value        = dewPoint.toFixed(1);
+                document.getElementById('slp').value         = avg('pressure_msl').toFixed(1);
+                document.getElementById('wdsp').value        = avg('wind_speed_10m').toFixed(1);
+                document.getElementById('max_temp').value    = d.temperature_2m_max[0].toFixed(1);
+                document.getElementById('min_temp').value    = d.temperature_2m_min[0].toFixed(1);
+                document.getElementById('prcp').value        = (d.precipitation_sum[0] ?? 0).toFixed(2);
+                document.getElementById('month').value       = now.getMonth() + 1;
+                document.getElementById('day_of_year').value = doy;
+
+                document.querySelectorAll('.weather-form input').forEach(el => {
+                    el.classList.add('flash');
+                    setTimeout(() => el.classList.remove('flash'), 600);
+                });
+
+                sname.textContent = `📍 ${lat.toFixed(2)}°, ${lon.toFixed(2)}° — avg of ${cutoff} hrs`;
+                sname.classList.add('visible');
+
+            } catch (err) {
+                console.error('Weather fetch error:', err);
+                sname.textContent = `⚠️ ${err.message}`;
+                sname.classList.add('visible');
+            }
+
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            label.textContent = 'Your Location';
+        },
+        (err) => {
+            btn.classList.remove('loading');
+            btn.disabled = false;
+            label.textContent = 'Your Location';
+
+            const msgs = {
+                1: '⚠️ Location access denied. Please allow it in your browser.',
+                2: '⚠️ Could not determine your location.',
+                3: '⚠️ Location request timed out.',
+            };
+            sname.textContent = msgs[err.code] || '⚠️ Location error.';
+            sname.classList.add('visible');
+        },
+        { timeout: 10000 }
+    );
+}
+const scenarios = {{ scenarios | tojson }};
+
+function randomizeInputs() {
+    const s = scenarios[Math.floor(Math.random() * scenarios.length)];
+    document.getElementById('latitude').value   = s.latitude;
+    document.getElementById('longitude').value  = s.longitude;
+    document.getElementById('elevation').value  = s.elevation;
+    document.getElementById('temp').value       = s.temp;
+    document.getElementById('dewp').value       = s.dewp;
+    document.getElementById('slp').value        = s.slp;
+    document.getElementById('wdsp').value       = s.wdsp;
+    document.getElementById('max_temp').value   = s.max_temp;
+    document.getElementById('min_temp').value   = s.min_temp;
+    document.getElementById('prcp').value       = s.prcp;
+    document.getElementById('month').value      = s.month;
+    document.getElementById('day_of_year').value = s.day_of_year;
+    document.getElementById('scenario-name').textContent = s.name;
+    document.getElementById('scenario-name').classList.add('visible');
+
+    // Flash animation on all inputs
+    document.querySelectorAll('.weather-form input').forEach(el => {
+        el.classList.add('flash');
+        setTimeout(() => el.classList.remove('flash'), 600);
+    });
+}
+
+// ── Modals ──
+function openModal(id) {
+    document.getElementById(id).classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+    document.body.style.overflow = '';
+}
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') document.querySelectorAll('.modal-overlay.active').forEach(m => m.classList.remove('active'));
+});
+
+// ── Auto-fill today's date ──
+const today = new Date();
+const doy = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+if (!document.getElementById('month').value) document.getElementById('month').value = today.getMonth() + 1;
+if (!document.getElementById('day_of_year').value) document.getElementById('day_of_year').value = doy;
+
+// ── Background particles ──
+const canvas = document.createElement('canvas');
+const particles = document.getElementById('particles');
+particles.appendChild(canvas);
+const ctx = canvas.getContext('2d');
+let pts = [];
+
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+resize();
+window.addEventListener('resize', resize);
+
+for (let i = 0; i < 60; i++) {
+    pts.push({ x: Math.random()*canvas.width, y: Math.random()*canvas.height,
+               r: Math.random()*1.5+0.5, dx: (Math.random()-0.5)*0.3, dy: (Math.random()-0.5)*0.3,
+               o: Math.random()*0.4+0.1 });
+}
+
+function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    pts.forEach(p => {
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle = `rgba(0,212,255,${p.o})`; ctx.fill();
+        p.x+=p.dx; p.y+=p.dy;
+        if(p.x<0||p.x>canvas.width) p.dx*=-1;
+        if(p.y<0||p.y>canvas.height) p.dy*=-1;
+    });
+    requestAnimationFrame(draw);
+}
+draw();
+</script>
+</body>
+</html>
