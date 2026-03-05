@@ -15,6 +15,13 @@ WeatherCast ML takes today's weather conditions as input and predicts **tomorrow
 
 ---
 
+## 🖥️ Application Screenshots
+
+### Homepage
+![Homepage](Deployment/Homepage.png)
+
+---
+
 ## 🤖 Models
 
 | Model | Task | Performance |
@@ -24,6 +31,46 @@ WeatherCast ML takes today's weather conditions as input and predicts **tomorrow
 | ⚠️ Extreme Weather | 5-class alert detection | Normal / Heat / Cold / Storm / Snow |
 
 All models trained with **LightGBM** using 45 engineered features including lag temperatures, rolling averages, cyclical seasonal encodings, and atmospheric pressure trends.
+
+---
+
+## 🧪 Live Prediction Tests
+
+Two real-world tests performed in **Boston, MA** using live weather data.
+
+### Test 1 — Yesterday's Data Input (March 4, 2026)
+
+**Input** — Yesterday's full-day average fetched automatically via Open-Meteo archive API:
+
+![Input 1](Deployment/input1.png)
+
+**Model Output** — Predicted **38.7°F** for next day, rain likely at 59.8%:
+
+![Output 1](Deployment/output1.png)
+
+**Actual Weather** — Google Weather showed **35°F** for Friday (high 35°, low 32°):
+
+![Actual Output 1](Deployment/actoutput1.png)
+
+> ✅ Prediction was **~3.7°F off** from actual. Rain prediction was correct — Friday had rain and snow.
+
+---
+
+### Test 2 — Your Location Input (March 5, 2026 — avg of 19 hrs)
+
+**Input** — Live location data fetched automatically, averaged over 19 hours of the current day:
+
+![Input 2](Deployment/input2.png)
+
+**Model Output** — Predicted **39.6°F** for next day, rain likely at 63.8%:
+
+![Output 2](Deployment/output2.png)
+
+**Actual Weather** — Google Weather showed **35°F** for Friday (high 35°, low 32°):
+
+![Actual Output 2](Deployment/actoutput2.png)
+
+> ✅ Prediction was **~4.6°F off** from actual. Rain/snow prediction was correct.
 
 ---
 
@@ -111,8 +158,6 @@ GET /api/predict?latitude=40.71&longitude=-74.01&temp=72&dewp=55
   "hint": "🌤️ Comfortable conditions tomorrow"
 }
 ```
-
----
 
 ---
 
