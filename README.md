@@ -103,7 +103,48 @@ Weather Forecast/
 
 ---
 
-## ⚙️ Setup & Run
+---
+
+## 🎬 Demo
+
+![Demo GIF](Deployment/demo.gif)
+
+> Record a quick demo using [ScreenToGif](https://www.screentogif.com/) (free) — open the app, hit Yesterday's Data, click Predict. Save as `demo.gif` in the `Deployment/` folder and push.
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+flowchart TD
+    A[🌐 Browser] -->|POST /predict| B[FastAPI Backend]
+    A -->|📍 Geolocation| C[Open-Meteo API]
+    C -->|Live weather data| A
+
+    B --> D[prepare_features]
+    D --> E[🌡️ Temp Model\nLightGBM Regressor]
+    D --> F[🌧️ Rain Model\nLightGBM Classifier]
+    D --> G[⚠️ Extreme Model\nLightGBM Classifier]
+
+    E --> H[get_weather_hint]
+    F --> H
+    G --> H
+
+    H -->|results dict| I[Jinja2 Template\nindex.html]
+    I -->|HTML Response| A
+
+    subgraph Training
+        J[NOAA GSOD\n92M Records] --> K[DuckDB\nFeature Engineering]
+        K --> L[LightGBM\n+ Optuna Tuning]
+        L --> M[.pkl Model Files]
+    end
+
+    M --> B
+```
+
+---
+
+## ⚠️ Limitations
 
 ```bash
 # 1. Clone the repo
