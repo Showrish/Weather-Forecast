@@ -22,6 +22,14 @@ WeatherCast ML takes today's weather conditions as input and predicts **tomorrow
 
 ---
 
+## 🎬 Demo
+
+![Demo GIF](Deployment/demo.gif)
+
+> Record a quick demo using [ScreenToGif](https://www.screentogif.com/) — open the app, hit Yesterday's Data, click Predict. Save as `demo.gif` in the `Deployment/` folder and push.
+
+---
+
 ## 🤖 Models
 
 | Model | Task | Performance |
@@ -74,45 +82,6 @@ Two real-world tests performed in **Boston, MA** using live weather data.
 
 ---
 
-## 🚀 Features
-
-- **Live weather input** — "Your Location" button fetches real-time data via Open-Meteo API using browser geolocation
-- **Yesterday's data** — fetches completed full-day averages from Open-Meteo's historical archive for accurate predictions
-- **Smart randomizer** — 12 pre-loaded real-world scenarios (NYC summer, Chicago blizzard, Miami storm, etc.)
-- **Contextual alerts** — dynamic hints like *❄️ Snow likely tomorrow* or *☂️ Bring an umbrella*
-- **Model info modals** — click any model card to see architecture, features used, and how it works
-- **JSON API** — `/api/predict` endpoint for programmatic access
-
----
-
-## 🗂️ Project Structure
-
-```
-Weather Forecast/
-├── main.py                  # FastAPI backend — loads models, routes, prediction logic
-├── requirements.txt         # Dependencies
-├── templates/
-│   └── index.html           # Frontend — dark UI, modals, geolocation, randomizer
-├── static/
-│   └── style.css            # Styling — glassmorphism, animations, responsive
-└── models/                  # LightGBM .pkl model files (not tracked in git)
-    ├── weather_model_92M.pkl
-    ├── rain_prediction_model.pkl
-    └── extreme_weather_model.pkl
-```
-
----
-
----
-
-## 🎬 Demo
-
-![Demo GIF](Deployment/demo.gif)
-
-> Record a quick demo using [ScreenToGif](https://www.screentogif.com/) (free) — open the app, hit Yesterday's Data, click Predict. Save as `demo.gif` in the `Deployment/` folder and push.
-
----
-
 ## 🏗️ Architecture
 
 ```mermaid
@@ -146,21 +115,41 @@ flowchart TD
 
 ## ⚠️ Limitations
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/Showrish/Weather-Forecast.git
-cd Weather-Forecast
+- **Average temperature only** — predicts next-day *mean* temperature, not the high or low. Actual daily average is typically 5–10°F lower than the daytime high shown on Google Weather.
+- **No true lag features at inference** — trained with 1/3/7/14-day lag temperatures from historical records. At inference these are approximated using today's temperature, which introduces some error.
+- **Best used with yesterday's completed data** — the "Yesterday's Data" button gives the most accurate predictions since it matches the full-day average format the model was trained on. "Your Location" uses a partial-day average which can skew results.
+- **Global model, local variance** — trained on 92M records from stations worldwide. Predictions in regions with fewer training stations may be less accurate.
+- **No precipitation amount** — rain model outputs Yes/No and a probability, but does not predict how much rain will fall.
+- **Extreme weather classes are rare** — Heat, Cold, Storm, and Snow alerts are a small fraction of training data, so the model leans toward predicting "Normal" in borderline cases.
 
-# 2. Install dependencies
-pip install -r requirements.txt
+---
 
-# 3. Add your trained models to the /models folder
+## 🚀 Features
 
-# 4. Run
-uvicorn main:app --reload
+- **Live weather input** — "Your Location" button fetches real-time data via Open-Meteo API using browser geolocation
+- **Yesterday's data** — fetches completed full-day averages from Open-Meteo's historical archive for accurate predictions
+- **Smart randomizer** — 12 pre-loaded real-world scenarios (NYC summer, Chicago blizzard, Miami storm, etc.)
+- **Contextual alerts** — dynamic hints like *❄️ Snow likely tomorrow* or *☂️ Bring an umbrella*
+- **Model info modals** — click any model card to see architecture, features used, and how it works
+- **JSON API** — `/api/predict` endpoint for programmatic access
+
+---
+
+## 🗂️ Project Structure
+
 ```
-
-Then open `http://localhost:8000` in your browser.
+Weather Forecast/
+├── main.py                  # FastAPI backend — loads models, routes, prediction logic
+├── requirements.txt         # Dependencies
+├── templates/
+│   └── index.html           # Frontend — dark UI, modals, geolocation, randomizer
+├── static/
+│   └── style.css            # Styling — glassmorphism, animations, responsive
+└── models/                  # LightGBM .pkl model files (not tracked in git)
+    ├── weather_model_92M.pkl
+    ├── rain_prediction_model.pkl
+    └── extreme_weather_model.pkl
+```
 
 ---
 
@@ -199,6 +188,26 @@ GET /api/predict?latitude=40.71&longitude=-74.01&temp=72&dewp=55
   "hint": "🌤️ Comfortable conditions tomorrow"
 }
 ```
+
+---
+
+## 💻 Try it on your PC
+
+```bash
+# 1. Clone the repo
+git clone https://github.com/Showrish/Weather-Forecast.git
+cd Weather-Forecast
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Add your trained models to the /models folder
+
+# 4. Run
+uvicorn main:app --reload
+```
+
+Then open `http://localhost:8000` in your browser.
 
 ---
 
