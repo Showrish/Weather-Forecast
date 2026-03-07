@@ -211,7 +211,7 @@ Then open `http://localhost:8000` in your browser.
 
 ## 📊 Data & Training
 
-- **Dataset:** NOAA Global Surface Summary of Day (GSOD)
+- **Dataset:** [NOAA Global Surface Summary of the Day (GSOD)](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00516)
 - **Size:** 92,209,203 records · 27 features
 - **Coverage:** Global weather stations · Year range 2000–2024
 - **Feature engineering:** 7/14/30-day lag temps, rolling averages, cyclical month/day encodings, humidity proxy, wind energy
