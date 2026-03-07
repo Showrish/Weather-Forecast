@@ -24,9 +24,7 @@ WeatherCast ML takes today's weather conditions as input and predicts **tomorrow
 
 ## 🎬 Demo
 
-![Demo GIF](Deployment/demo.gif)
-
-> Record a quick demo using [ScreenToGif](https://www.screentogif.com/) — open the app, hit Yesterday's Data, click Predict. Save as `demo.gif` in the `Deployment/` folder and push.
+![Demo GIF](Deployment/tomorrowsweather.gif)
 
 ---
 
