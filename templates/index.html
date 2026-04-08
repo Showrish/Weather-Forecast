@@ -111,6 +111,10 @@
             <button type="button" class="btn-yesterday" id="yday-btn" onclick="fetchYesterday()">
                 <span class="yday-icon">📅</span><span id="yday-label">Yesterday's Data</span>
             </button>
+            <div class="city-search-wrap" style="display:flex;gap:6px;align-items:center;">
+                <input type="text" id="city-input" placeholder="Search city…" style="background:#1a1f2e;border:1px solid #2a3048;border-radius:8px;padding:10px 14px;color:#fff;font-size:13px;outline:none;width:160px;">
+                <button type="button" class="btn-location" onclick="fetchByCity()">🔍 City</button>
+            </div>
             <span id="scenario-name" class="scenario-label"></span>
         </div>
 
@@ -430,6 +434,30 @@ for(let i=0;i<60;i++) pts.push({x:Math.random()*innerWidth,y:Math.random()*inner
     });
     requestAnimationFrame(draw);
 })();
+async function fetchByCity() {
+    const city = document.getElementById('city-input').value.trim();
+    const tag = document.getElementById('scenario-name');
+    if (!city) { tag.textContent = '⚠️ Enter a city name'; tag.classList.add('visible'); return; }
+    tag.textContent = 'Searching...'; tag.classList.add('visible');
+    try {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city)}&format=json&limit=1`, {headers:{'User-Agent':'WeatherForecast/1.0'}});
+        const geo = await geoRes.json();
+        if (!geo.length) { tag.textContent = '⚠️ City not found'; return; }
+        const lat = parseFloat(geo[0].lat), lon = parseFloat(geo[0].lon);
+        const elevRes = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lat}&longitude=${lon}`);
+        const elev = (await elevRes.json()).elevation?.[0] ?? 0;
+        const wxRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,dew_point_2m,precipitation,wind_speed_10m,pressure_msl,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&temperature_unit=fahrenheit&wind_speed_unit=kn&precipitation_unit=inch&timezone=auto&forecast_days=1`);
+        const raw = await wxRes.json();
+        const h = raw.hourly, d = raw.daily;
+        const avg = k => { const v = h[k].filter(x => x != null); return v.reduce((a,b) => a+b, 0) / v.length; };
+        const dp = h.dew_point_2m ? avg('dew_point_2m') : avg('temperature_2m') - ((100 - avg('relative_humidity_2m')) / 5);
+        const now = new Date(), doy = Math.floor((now - new Date(now.getFullYear(),0,0)) / 86400000);
+        const vals = {latitude:lat.toFixed(2),longitude:lon.toFixed(2),elevation:Math.round(elev),temp:avg('temperature_2m').toFixed(1),dewp:dp.toFixed(1),slp:avg('pressure_msl').toFixed(1),wdsp:avg('wind_speed_10m').toFixed(1),max_temp:d.temperature_2m_max[0].toFixed(1),min_temp:d.temperature_2m_min[0].toFixed(1),prcp:(d.precipitation_sum[0]??0).toFixed(2),month:now.getMonth()+1,day_of_year:doy};
+        Object.entries(vals).forEach(([k,v]) => { const el = document.getElementById(k); if(el) el.value = v; });
+        document.querySelectorAll('.weather-form input').forEach(el => { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 600); });
+        tag.textContent = `📍 ${geo[0].display_name.split(',').slice(0,2).join(',')}`;
+    } catch(e) { tag.textContent = `⚠️ ${e.message}`; }
+}
 </script>
 </body>
 </html>
