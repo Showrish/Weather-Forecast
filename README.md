@@ -6,12 +6,15 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi)
 ![LightGBM](https://img.shields.io/badge/LightGBM-ML-orange?style=flat-square)
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-yellow?style=flat-square)
+![AWS](https://img.shields.io/badge/Deployed-AWS%20EC2-FF9900?style=flat-square&logo=amazonaws&logoColor=white)
+
+🌐 **Live Demo:** http://52.71.254.49:8001
 
 ---
 
 ## 🔍 Overview
 
-WeatherCast ML takes today's weather conditions as input and predicts **tomorrow's weather** using three independently trained LightGBM models. It features a live geolocation button that auto-fills all inputs using the Open-Meteo API, and a rich dark-themed UI.
+WeatherCast ML takes today's weather conditions as input and predicts **tomorrow's weather** using three independently trained LightGBM models. It features a city search button, a live geolocation button, and a yesterday's data button that auto-fill all inputs using the Open-Meteo API — all on a rich dark-themed UI deployed on AWS EC2.
 
 ---
 
@@ -85,7 +88,7 @@ Two real-world tests performed in **Boston, MA** using live weather data.
 ```mermaid
 flowchart TD
     A[🌐 Browser] -->|POST /predict| B[FastAPI Backend]
-    A -->|📍 Geolocation| C[Open-Meteo API]
+    A -->|📍 Geolocation / City Search| C[Open-Meteo API + Nominatim]
     C -->|Live weather data| A
 
     B --> D[prepare_features]
@@ -115,7 +118,7 @@ flowchart TD
 
 - **Average temperature only** — predicts next-day *mean* temperature, not the high or low. Actual daily average is typically 5–10°F lower than the daytime high shown on Google Weather.
 - **No true lag features at inference** — trained with 1/3/7/14-day lag temperatures from historical records. At inference these are approximated using today's temperature, which introduces some error.
-- **Best used with yesterday's completed data** — the "Yesterday's Data" button gives the most accurate predictions since it matches the full-day average format the model was trained on. "Your Location" uses a partial-day average which can skew results.
+- **Best used with yesterday's completed data** — the "Yesterday's Data" button gives the most accurate predictions since it matches the full-day average format the model was trained on.
 - **Global model, local variance** — trained on 92M records from stations worldwide. Predictions in regions with fewer training stations may be less accurate.
 - **No precipitation amount** — rain model outputs Yes/No and a probability, but does not predict how much rain will fall.
 - **Extreme weather classes are rare** — Heat, Cold, Storm, and Snow alerts are a small fraction of training data, so the model leans toward predicting "Normal" in borderline cases.
@@ -124,6 +127,7 @@ flowchart TD
 
 ## 🚀 Features
 
+- **City search** — type any city name to auto-fill all weather inputs via Nominatim geocoding + Open-Meteo API
 - **Live weather input** — "Your Location" button fetches real-time data via Open-Meteo API using browser geolocation
 - **Yesterday's data** — fetches completed full-day averages from Open-Meteo's historical archive for accurate predictions
 - **Smart randomizer** — 12 pre-loaded real-world scenarios (NYC summer, Chicago blizzard, Miami storm, etc.)
@@ -140,7 +144,7 @@ Weather Forecast/
 ├── main.py                  # FastAPI backend — loads models, routes, prediction logic
 ├── requirements.txt         # Dependencies
 ├── templates/
-│   └── index.html           # Frontend — dark UI, modals, geolocation, randomizer
+│   └── index.html           # Frontend — dark UI, modals, geolocation, city search
 ├── static/
 │   └── style.css            # Styling — glassmorphism, animations, responsive
 └── models/                  # LightGBM .pkl model files (not tracked in git)
@@ -160,7 +164,9 @@ Weather Forecast/
 | Data Processing | DuckDB · Pandas · NumPy |
 | Training Data | NOAA GSOD — 92M records |
 | Live Weather | Open-Meteo API (free, no key) |
+| Geocoding | Nominatim (OpenStreetMap) |
 | Frontend | Vanilla HTML/CSS/JS |
+| Deployment | AWS EC2 (t3.micro) — systemd managed |
 
 ---
 
@@ -189,23 +195,17 @@ GET /api/predict?latitude=40.71&longitude=-74.01&temp=72&dewp=55
 
 ---
 
-## 💻 Try it on your PC
+## 💻 Run Locally
 
 ```bash
-# 1. Clone the repo
 git clone https://github.com/Showrish/Weather-Forecast.git
 cd Weather-Forecast
-
-# 2. Install dependencies
 pip install -r requirements.txt
-
-# 3. Add your trained models to the /models folder
-
-# 4. Run
+# Add trained models to /models folder
 uvicorn main:app --reload
 ```
 
-Then open `http://localhost:8000` in your browser.
+Open `http://localhost:8000` in your browser.
 
 ---
 
