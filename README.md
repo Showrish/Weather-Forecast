@@ -1,6 +1,6 @@
 # 🌤️ WeatherCast ML
 
-> Predictive weather forecasting web application powered by machine learning — trained on **92 million** real-world weather records from NOAA's Global Surface Summary of Day (GSOD) dataset.
+> Next-day weather forecasting app powered by three LightGBM models, trained on **92 million** real-world weather records from NOAA's Global Surface Summary of the Day (GSOD) dataset.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=flat-square&logo=fastapi)
@@ -10,9 +10,19 @@
 
 ---
 
+## ⭐ Highlights
+
+- **92,209,203 NOAA records** from 2000 to 2024, processed with DuckDB
+- **Temperature model:** R² = 0.9669, MAE = 2.88°F
+- **Real-world tests in Boston:** landed within ~3.7°F and ~4.6°F of the actual temperature, and called rain correctly both times
+- **Three LightGBM models** for temperature, rain and extreme weather, built on 45 engineered features and tuned with Optuna
+- **Served through FastAPI** with a JSON API and a custom web UI
+
+---
+
 ## 🔍 Overview
 
-WeatherCast ML takes today's weather conditions as input and predicts **tomorrow's weather** using three independently trained LightGBM models. It features a city search button, a live geolocation button, and a yesterday's data button that auto-fill all inputs using the Open-Meteo API — all on a rich dark-themed UI deployed on AWS EC2.
+WeatherCast ML takes today's weather conditions as input and predicts **tomorrow's weather** using three independently trained LightGBM models. It features a city search button, a live geolocation button and a yesterday's data button that auto-fill all inputs using the Open-Meteo API, all on a dark-themed UI that was deployed on AWS EC2.
 
 ---
 
@@ -33,11 +43,11 @@ WeatherCast ML takes today's weather conditions as input and predicts **tomorrow
 
 | Model | Task | Performance |
 |---|---|---|
-| 🌡️ Temperature | Predict tomorrow's avg temperature (°F) | R² = 0.9669 · MAE = 2.88°F |
-| 🌧️ Rain Prediction | Binary classification — will it rain? | Outputs Yes/No + probability % |
+| 🌡️ Temperature | Predict tomorrow's average temperature (°F) | R² = 0.9669 · MAE = 2.88°F |
+| 🌧️ Rain Prediction | Binary classification: will it rain? | Outputs Yes/No + probability % |
 | ⚠️ Extreme Weather | 5-class alert detection | Normal / Heat / Cold / Storm / Snow |
 
-All models trained with **LightGBM** using 45 engineered features including lag temperatures, rolling averages, cyclical seasonal encodings, and atmospheric pressure trends.
+All models were trained with **LightGBM** using 45 engineered features, including lag temperatures, rolling averages, cyclical seasonal encodings and atmospheric pressure trends.
 
 ---
 
@@ -45,39 +55,39 @@ All models trained with **LightGBM** using 45 engineered features including lag 
 
 Two real-world tests performed in **Boston, MA** using live weather data.
 
-### Test 1 — Yesterday's Data Input (March 4, 2026)
+### Test 1: Yesterday's Data Input (March 4, 2026)
 
-**Input** — Yesterday's full-day average fetched automatically via Open-Meteo archive API:
+**Input:** yesterday's full-day average, fetched automatically via the Open-Meteo archive API.
 
 ![Input 1](Deployment/input1.png)
 
-**Model Output** — Predicted **38.7°F** for next day, rain likely at 59.8%:
+**Model output:** predicted **38.7°F** for the next day, with rain likely at 59.8%.
 
 ![Output 1](Deployment/output1.png)
 
-**Actual Weather** — Google Weather showed **35°F** for Friday (high 35°, low 32°):
+**Actual weather:** Google Weather showed **35°F** for Friday (high 35°, low 32°).
 
 ![Actual Output 1](Deployment/actoutput1.png)
 
-> ✅ Prediction was **~3.7°F off** from actual. Rain prediction was correct — Friday had rain and snow.
+> ✅ The prediction was **~3.7°F off** from actual. The rain prediction was correct, since Friday had rain and snow.
 
 ---
 
-### Test 2 — Your Location Input (March 5, 2026 — avg of 19 hrs)
+### Test 2: Your Location Input (March 5, 2026, average of 19 hours)
 
-**Input** — Live location data fetched automatically, averaged over 19 hours of the current day:
+**Input:** live location data, fetched automatically and averaged over 19 hours of the current day.
 
 ![Input 2](Deployment/input2.png)
 
-**Model Output** — Predicted **39.6°F** for next day, rain likely at 63.8%:
+**Model output:** predicted **39.6°F** for the next day, with rain likely at 63.8%.
 
 ![Output 2](Deployment/output2.png)
 
-**Actual Weather** — Google Weather showed **35°F** for Friday (high 35°, low 32°):
+**Actual weather:** Google Weather showed **35°F** for Friday (high 35°, low 32°).
 
 ![Actual Output 2](Deployment/actoutput2.png)
 
-> ✅ Prediction was **~4.6°F off** from actual. Rain/snow prediction was correct.
+> ✅ The prediction was **~4.6°F off** from actual. The rain and snow prediction was correct.
 
 ---
 
@@ -114,24 +124,24 @@ flowchart TD
 
 ## ⚠️ Limitations
 
-- **Average temperature only** — predicts next-day *mean* temperature, not the high or low. Actual daily average is typically 5–10°F lower than the daytime high shown on Google Weather.
-- **No true lag features at inference** — trained with 1/3/7/14-day lag temperatures from historical records. At inference these are approximated using today's temperature, which introduces some error.
-- **Best used with yesterday's completed data** — the "Yesterday's Data" button gives the most accurate predictions since it matches the full-day average format the model was trained on.
-- **Global model, local variance** — trained on 92M records from stations worldwide. Predictions in regions with fewer training stations may be less accurate.
-- **No precipitation amount** — rain model outputs Yes/No and a probability, but does not predict how much rain will fall.
-- **Extreme weather classes are rare** — Heat, Cold, Storm, and Snow alerts are a small fraction of training data, so the model leans toward predicting "Normal" in borderline cases.
+- **Average temperature only:** predicts next-day *mean* temperature, not the high or low. The actual daily average is typically 5 to 10°F lower than the daytime high shown on Google Weather.
+- **No true lag features at inference:** trained with 1/3/7/14-day lag temperatures from historical records. At inference, these are approximated using today's temperature, which introduces some error.
+- **Best used with yesterday's completed data:** the "Yesterday's Data" button gives the most accurate predictions, since it matches the full-day average format the model was trained on.
+- **Global model, local variance:** trained on 92M records from stations worldwide, so predictions in regions with fewer training stations may be less accurate.
+- **No precipitation amount:** the rain model outputs Yes/No and a probability, but doesn't predict how much rain will fall.
+- **Extreme weather classes are rare:** Heat, Cold, Storm and Snow alerts are a small fraction of the training data, so the model leans toward predicting "Normal" in borderline cases.
 
 ---
 
 ## 🚀 Features
 
-- **City search** — type any city name to auto-fill all weather inputs via Nominatim geocoding + Open-Meteo API
-- **Live weather input** — "Your Location" button fetches real-time data via Open-Meteo API using browser geolocation
-- **Yesterday's data** — fetches completed full-day averages from Open-Meteo's historical archive for accurate predictions
-- **Smart randomizer** — 12 pre-loaded real-world scenarios (NYC summer, Chicago blizzard, Miami storm, etc.)
-- **Contextual alerts** — dynamic hints like *❄️ Snow likely tomorrow* or *☂️ Bring an umbrella*
-- **Model info modals** — click any model card to see architecture, features used, and how it works
-- **JSON API** — `/api/predict` endpoint for programmatic access
+- **City search:** type any city name to auto-fill all weather inputs via Nominatim geocoding and the Open-Meteo API
+- **Live weather input:** the "Your Location" button fetches real-time data from the Open-Meteo API using browser geolocation
+- **Yesterday's data:** fetches completed full-day averages from Open-Meteo's historical archive for accurate predictions
+- **Smart randomizer:** 12 preloaded real-world scenarios (NYC summer, Chicago blizzard, Miami storm and more)
+- **Contextual alerts:** dynamic hints like *❄️ Snow likely tomorrow* or *☂️ Bring an umbrella*
+- **Model info modals:** click any model card to see its architecture, features used and how it works
+- **JSON API:** a `/api/predict` endpoint for programmatic access
 
 ---
 
@@ -139,12 +149,12 @@ flowchart TD
 
 ```
 Weather Forecast/
-├── main.py                  # FastAPI backend — loads models, routes, prediction logic
+├── main.py                  # FastAPI backend: loads models, routes, prediction logic
 ├── requirements.txt         # Dependencies
 ├── templates/
-│   └── index.html           # Frontend — dark UI, modals, geolocation, city search
+│   └── index.html           # Frontend: dark UI, modals, geolocation, city search
 ├── static/
-│   └── style.css            # Styling — glassmorphism, animations, responsive
+│   └── style.css            # Styling: glassmorphism, animations, responsive
 └── models/                  # LightGBM .pkl model files (not tracked in git)
     ├── weather_model_92M.pkl
     ├── rain_prediction_model.pkl
@@ -160,11 +170,11 @@ Weather Forecast/
 | Backend | FastAPI + Uvicorn |
 | ML Models | LightGBM |
 | Data Processing | DuckDB · Pandas · NumPy |
-| Training Data | NOAA GSOD — 92M records |
+| Training Data | NOAA GSOD, 92M records |
 | Live Weather | Open-Meteo API (free, no key) |
 | Geocoding | Nominatim (OpenStreetMap) |
 | Frontend | Vanilla HTML/CSS/JS |
-| Deployment | AWS EC2 (t3.micro) — systemd managed |
+| Deployment | AWS EC2 (t3.micro) via AWS Academy, managed with systemd |
 
 ---
 
@@ -199,7 +209,7 @@ GET /api/predict?latitude=40.71&longitude=-74.01&temp=72&dewp=55
 git clone https://github.com/Showrish/Weather-Forecast.git
 cd Weather-Forecast
 pip install -r requirements.txt
-# Add trained models to /models folder
+# Add trained models to the /models folder
 uvicorn main:app --reload
 ```
 
@@ -210,9 +220,9 @@ Open `http://localhost:8000` in your browser.
 ## 📊 Data & Training
 
 - **Dataset:** [NOAA Global Surface Summary of the Day (GSOD)](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00516)
-- **Size:** 92,209,203 records · 27 features
-- **Coverage:** Global weather stations · Year range 2000–2024
-- **Feature engineering:** 7/14/30-day lag temps, rolling averages, cyclical month/day encodings, humidity proxy, wind energy
+- **Size:** 92,209,203 records · 27 raw features
+- **Coverage:** global weather stations, 2000 to 2024
+- **Feature engineering:** 7/14/30-day lag temps, rolling averages, cyclical month and day encodings, humidity proxy, wind energy
 - **Training pipeline:** DuckDB for big data processing → LightGBM with early stopping → Optuna hyperparameter tuning
 
 ---
@@ -247,4 +257,6 @@ Open `http://localhost:8000` in your browser.
 
 ## 👤 Author
 
-**Showrish** — Big Data Project 2026
+**Showrish Reddy Sampath** · MPS Applied Machine Intelligence, Northeastern University · [LinkedIn](https://linkedin.com/in/showrish-reddy-sampath-b508a22a6)
+
+Built as a Big Data course project, Spring 2026.
