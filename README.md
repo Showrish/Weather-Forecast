@@ -8,8 +8,6 @@
 ![DuckDB](https://img.shields.io/badge/DuckDB-Analytics-yellow?style=flat-square)
 ![AWS](https://img.shields.io/badge/Deployed-AWS%20EC2-FF9900?style=flat-square&logo=amazonaws&logoColor=white)
 
-🌐 **Live Demo:** http://52.71.254.49:8001
-
 ---
 
 ## 🔍 Overview
