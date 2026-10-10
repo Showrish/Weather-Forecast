@@ -125,7 +125,8 @@ flowchart TD
 ## ⚠️ Limitations
 
 - **Average temperature only:** predicts next-day *mean* temperature, not the high or low. The actual daily average is typically 5 to 10°F lower than the daytime high shown on Google Weather.
-- **No true lag features at inference:** trained with 1/3/7/14-day lag temperatures from historical records. At inference, these are approximated using today's temperature, which introduces some error.
+- **No true lag features at inference:** trained with 1/3/7/14-day lag temperatures from historical records. At inference, these are approximated from today's temperature with fixed offsets, which introduces some error.
+- **Some inputs are estimated:** visibility, gusts, maximum wind speed and station pressure are derived from the basic inputs instead of measured, so unusual conditions may be captured less accurately.
 - **Best used with yesterday's completed data:** the "Yesterday's Data" button gives the most accurate predictions, since it matches the full-day average format the model was trained on.
 - **Global model, local variance:** trained on 92M records from stations worldwide, so predictions in regions with fewer training stations may be less accurate.
 - **No precipitation amount:** the rain model outputs Yes/No and a probability, but doesn't predict how much rain will fall.
@@ -222,7 +223,7 @@ Open `http://localhost:8000` in your browser.
 - **Dataset:** [NOAA Global Surface Summary of the Day (GSOD)](https://www.ncei.noaa.gov/access/metadata/landing-page/bin/iso?id=gov.noaa.ncdc:C00516)
 - **Size:** 92,209,203 records · 27 raw features
 - **Coverage:** global weather stations, 2000 to 2024
-- **Feature engineering:** 7/14/30-day lag temps, rolling averages, cyclical month and day encodings, humidity proxy, wind energy
+- **Feature engineering:** 1/3/7/14-day temperature lags, 1-day lags for dew point, pressure, wind and precipitation, 7- and 30-day rolling averages, cyclical month and day encodings, humidity proxy, temperature range, wind energy
 - **Training pipeline:** DuckDB for big data processing → LightGBM with early stopping → Optuna hyperparameter tuning
 
 ---
